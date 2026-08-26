@@ -30,5 +30,7 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
+          TATATELE_USER: ${{ secrets.TATATELE_USER }}
+          TATATELE_PASS: ${{ secrets.TATATELE_PASS }}
         run: |
           python run_headless_silent_reports.py

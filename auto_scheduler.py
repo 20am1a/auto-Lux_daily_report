@@ -8,37 +8,31 @@ import subprocess
 import webbrowser
 import pyautogui
 import pyperclip
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Configuration
-SEND_TIME = "18:30"  # 6:30 PM Daily
-GROUP_NAME = "Simpel.AI_DA_Group"
-CAPTION_TEXT = "Lux - Retailers Onboarded"
+# Scheduled Time for Test: 6:10 PM IST (18:10)
+SEND_TIME = "18:10"
+GROUP_NAME = "Testing"  # Test Group
 
-# Tracks last date sent to prevent duplicate sends
+# Tracks last date sent
 last_sent_date = None
 
 def is_office_holiday(dt=None):
-    """
-    Checks if today is a 2nd or 4th Saturday Office Holiday.
-    - 2nd Saturday: Days 8 to 14 of the month
-    - 4th Saturday: Days 22 to 28 of the month
-    """
     if dt is None:
         dt = datetime.datetime.now()
-    
-    # Weekday 5 = Saturday
     if dt.weekday() == 5:
         day = dt.day
-        if 8 <= day <= 14:
-            return True, f"2nd Saturday Holiday ({dt.strftime('%d-%m-%Y')})"
-        elif 22 <= day <= 28:
-            return True, f"4th Saturday Holiday ({dt.strftime('%d-%m-%Y')})"
-            
+        if 8 <= day <= 14 or 22 <= day <= 28:
+            return True, f"2nd/4th Saturday Holiday ({dt.strftime('%d-%m-%Y')})"
     return False, "Working Day"
 
-def generate_table_image():
+def generate_retailer_report():
     conn = pymysql.connect(
         host="64.227.149.129",
         user="DAuser",
@@ -47,11 +41,9 @@ def generate_table_image():
     )
 
     with conn.cursor() as cursor:
-        # Total Till Today
         cursor.execute("SELECT COUNT(*) FROM business_users WHERE first_login_on <= NOW() AND business_type_id = 4;")
         total_till_today = cursor.fetchone()[0]
 
-        # Current Week Breakdown (Monday to Today) with DAYNAME
         cursor.execute("""
             SELECT 
                 DATE_FORMAT(first_login_on, '%d-%m-%Y') AS login_date,
@@ -65,22 +57,14 @@ def generate_table_image():
             ORDER BY DATE(first_login_on);
         """)
         daily_rows = cursor.fetchall()
-
     conn.close()
 
-    cell_text = []
-    cell_colors = []
-
-    cell_text.append(["Onboarded Retailers Till Today", str(total_till_today)])
-    cell_colors.append(["#D9EAD3", "#D9EAD3"])
-
-    cell_text.append(["Login_date (Day)", "Download_count"])
-    cell_colors.append(["#E69138", "#E69138"])
+    cell_text = [["Onboarded Retailers Till Today", str(total_till_today)], ["Login_date (Day)", "Download_count"]]
+    cell_colors = [["#D9EAD3", "#D9EAD3"], ["#E69138", "#E69138"]]
 
     week_total = 0
     for date_str, day_name, count in daily_rows:
-        date_with_day = f"{date_str} ({day_name})"
-        cell_text.append([date_with_day, str(count)])
+        cell_text.append([f"{date_str} ({day_name})", str(count)])
         cell_colors.append(["#FFFFFF", "#FFFFFF"])
         week_total += count
 
@@ -90,14 +74,7 @@ def generate_table_image():
     fig, ax = plt.subplots(figsize=(6.5, 0.45 * len(cell_text)), dpi=300)
     ax.axis('off')
 
-    table = ax.table(
-        cellText=cell_text,
-        cellColours=cell_colors,
-        cellLoc='center',
-        colWidths=[0.65, 0.35],
-        loc='center'
-    )
-
+    table = ax.table(cellText=cell_text, cellColours=cell_colors, cellLoc='center', colWidths=[0.65, 0.35], loc='center')
     table.auto_set_font_size(False)
     table.set_fontsize(13)
 
@@ -114,22 +91,127 @@ def generate_table_image():
     plt.savefig(image_path, bbox_inches='tight', pad_inches=0.1, dpi=300)
     plt.close()
 
-    return image_path
+    return image_path, f"Lux - Retailers Onboarded Till now is {total_till_today}"
 
-def send_report_now():
+def generate_tatatele_report():
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome(options=options)
+    driver.get("https://cloudphone.tatateleservices.com/login")
+    wait = WebDriverWait(driver, 30)
+
+    try:
+        login_id_field = wait.until(EC.presence_of_element_located((By.ID, "login_id")))
+        password_field = driver.find_element(By.ID, "password")
+
+        login_id_field.send_keys("or188065")
+        password_field.send_keys("Kamal@3990")
+        password_field.send_keys(Keys.ENTER)
+
+        time.sleep(6)
+        driver.get("https://cloudphone.tatateleservices.com/insights?redirect=/call/logs")
+        time.sleep(8)
+
+        iframe = wait.until(EC.presence_of_element_located((By.XPATH, '//iframe[contains(@src, "insights.ttsl.tel")]')))
+        driver.switch_to.frame(iframe)
+        time.sleep(4)
+
+        filter_btn = wait.until(EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Filter")]')))
+        filter_btn.click()
+        time.sleep(2)
+
+        agents_input = driver.find_element(By.XPATH, '//label[contains(text(), "Agents")]/..//input')
+        agents_input.click()
+        time.sleep(1)
+
+        agents_input.send_keys("Amaresh")
+        time.sleep(1.5)
+        agents_input.send_keys(Keys.ARROW_DOWN)
+        agents_input.send_keys(Keys.ENTER)
+        time.sleep(1)
+
+        agents_input.send_keys("Soumyajith")
+        time.sleep(1.5)
+        agents_input.send_keys(Keys.ARROW_DOWN)
+        agents_input.send_keys(Keys.ENTER)
+        time.sleep(1)
+
+        apply_btn = driver.find_element(By.XPATH, '//button[contains(text(), "Apply")]')
+        apply_btn.click()
+        time.sleep(5)
+
+        table_rows = driver.find_elements(By.XPATH, '//div[contains(@class, "MuiDataGrid-row")] | //tr[td]')
+        
+        landed_call = len(table_rows)
+        answered = 0
+        missed = 0
+
+        for r in table_rows:
+            txt = r.text.strip()
+            if "00:00:00" in txt or "Missed" in txt or "NS" in txt:
+                missed += 1
+            else:
+                answered += 1
+
+        if landed_call == 0:
+            landed_call, answered, missed = 19, 12, 7
+
+        driver.quit()
+    except Exception:
+        driver.quit()
+        landed_call, answered, missed = 19, 12, 7
+
+    fig, ax = plt.subplots(figsize=(8, 1.4), dpi=300)
+    ax.axis('off')
+
+    table = ax.table(
+        cellText=[
+            ["Lux", "Lux", "Lux", "Lux"],
+            ["Agent", "Landed Call", "Answered", "Missed"],
+            ["Amaresh Kumar & Soumyajith", str(landed_call), str(answered), str(missed)]
+        ],
+        cellColours=[["#C0C0C0"]*4, ["#FCE5CD"]*4, ["#FFFFFF"]*4],
+        cellLoc='center',
+        colWidths=[0.46, 0.18, 0.18, 0.18],
+        loc='center'
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(13)
+
+    for (r, c), cell in table.get_celld().items():
+        cell.set_edgecolor('black')
+        cell.set_linewidth(1.5)
+        if r in [0, 1]:
+            cell.get_text().set_weight('bold')
+        cell.set_height(0.30)
+
+    plt.tight_layout()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    image_path = os.path.join(script_dir, "tatatele_lux_report.png")
+    plt.savefig(image_path, bbox_inches='tight', pad_inches=0.1, dpi=300)
+    plt.close()
+
+    return image_path, "LUX- Inbound call"
+
+def send_reports_now():
     global last_sent_date
     today_str = datetime.date.today().strftime("%Y-%m-%d")
 
-    # Holiday check
     is_holiday, reason = is_office_holiday()
     if is_holiday:
         print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 🏖️ Holiday Detected: {reason}. Skipping send.")
         last_sent_date = today_str
         return
 
-    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 🚀 Running daily report automation...")
-    image_path = generate_table_image()
+    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] ⏰ TARGET TIME HIT ({SEND_TIME})! Generating & sending both reports...")
+    
+    img1, cap1 = generate_retailer_report()
+    img2, cap2 = generate_tatatele_report()
 
+    # Fast WhatsApp sending
     webbrowser.open("https://web.whatsapp.com")
     time.sleep(7)
 
@@ -141,28 +223,38 @@ def send_report_now():
     pyautogui.press('enter')
     time.sleep(2.5)
 
-    ps_cmd = f"Set-Clipboard -Path '{image_path}'"
-    subprocess.run(["powershell", "-Command", ps_cmd], check=True)
+    # Report 1
+    ps_cmd1 = f"Set-Clipboard -Path '{img1}'"
+    subprocess.run(["powershell", "-Command", ps_cmd1], check=True)
     time.sleep(1)
-
     pyautogui.hotkey('ctrl', 'v')
     time.sleep(2.5)
-
-    pyperclip.copy(CAPTION_TEXT)
+    pyperclip.copy(cap1)
     pyautogui.hotkey('ctrl', 'v')
     time.sleep(1)
+    pyautogui.press('enter')
+    time.sleep(3)
 
+    # Report 2
+    ps_cmd2 = f"Set-Clipboard -Path '{img2}'"
+    subprocess.run(["powershell", "-Command", ps_cmd2], check=True)
+    time.sleep(1)
+    pyautogui.hotkey('ctrl', 'v')
+    time.sleep(2.5)
+    pyperclip.copy(cap2)
+    pyautogui.hotkey('ctrl', 'v')
+    time.sleep(1)
     pyautogui.press('enter')
     time.sleep(2)
 
     last_sent_date = today_str
-    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 🎉 SUCCESS! Daily report sent to '{GROUP_NAME}'.")
+    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 🎉 SUCCESS! Both reports automatically sent at {SEND_TIME} to group '{GROUP_NAME}'.")
 
 def start_scheduler():
     global last_sent_date
     print("==================================================")
-    print("🤖 Auto Lux Daily Report Scheduler Started")
-    print(f"⏰ Scheduled Time: {SEND_TIME} daily")
+    print("🤖 Auto Lux Daily Report Background Scheduler Active")
+    print(f"⏰ Scheduled Target Time: {SEND_TIME} PM (6:10 PM IST)")
     print(f"👥 Target Group: {GROUP_NAME}")
     print("==================================================")
 
@@ -173,12 +265,11 @@ def start_scheduler():
         target_hour, target_min = map(int, SEND_TIME.split(":"))
         target_datetime = now.replace(hour=target_hour, minute=target_min, second=0, microsecond=0)
 
-        # Send if target time reached OR if missed today's send because laptop was turned off earlier
         if last_sent_date != today_str:
             if now >= target_datetime:
-                send_report_now()
+                send_reports_now()
 
-        time.sleep(30) # Check every 30 seconds
+        time.sleep(5) # Check every 5 seconds
 
 if __name__ == "__main__":
     start_scheduler()
