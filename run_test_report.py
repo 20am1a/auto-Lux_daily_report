@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import sys
 import time
+import datetime
 import subprocess
 import webbrowser
 import pyautogui
@@ -12,8 +13,15 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 # Target Group Name (Test Group)
 GROUP_NAME = "Testing"
-# Caption Text
-CAPTION_TEXT = "Lux - Retailers Onboarded"
+
+def is_office_holiday(dt=None):
+    if dt is None:
+        dt = datetime.datetime.now()
+    if dt.weekday() == 5:
+        day = dt.day
+        if 8 <= day <= 14 or 22 <= day <= 28:
+            return True, f"2nd/4th Saturday Holiday ({dt.strftime('%d-%m-%Y')})"
+    return False, "Working Day"
 
 def generate_table_image():
     conn = pymysql.connect(
@@ -89,12 +97,17 @@ def generate_table_image():
     plt.savefig(image_path, bbox_inches='tight', pad_inches=0.1, dpi=300)
     plt.close()
 
-    return image_path
+    caption_text = f"Lux - Retailers Onboarded Till now is {total_till_today}"
+    return image_path, caption_text
 
-def main():
-    print("1. Generating live report table image from database...")
-    image_path = generate_table_image()
-    print("Image saved:", image_path)
+def send_retailer_report():
+    is_holiday, holiday_reason = is_office_holiday()
+    if is_holiday:
+        print(f"🏖️ OFFICE HOLIDAY DETECTED: {holiday_reason}. Skipping send.")
+        return
+
+    print("1. Generating live retailer onboarding report image...")
+    image_path, caption_text = generate_table_image()
 
     print("2. Opening WhatsApp Web in Chrome...")
     webbrowser.open("https://web.whatsapp.com")
@@ -114,22 +127,22 @@ def main():
     subprocess.run(["powershell", "-Command", ps_cmd], check=True)
     time.sleep(1)
 
-    print("5. Pasting table image into group chat...")
+    print("5. Pasting table image into chat...")
     pyautogui.hotkey('ctrl', 'v')
     time.sleep(2.5)
 
-    print(f"6. Pasting caption '{CAPTION_TEXT}'...")
-    pyperclip.copy(CAPTION_TEXT)
+    print(f"6. Pasting caption '{caption_text}'...")
+    pyperclip.copy(caption_text)
     pyautogui.hotkey('ctrl', 'v')
     time.sleep(1)
 
-    print("7. Sending report image + caption to group...")
+    print("7. Sending report 1...")
     pyautogui.press('enter')
-    time.sleep(2)
+    time.sleep(3)
 
     print("--------------------------------------------------")
-    print(f"🎉 SUCCESS! Report image & caption '{CAPTION_TEXT}' sent to test group '{GROUP_NAME}'!")
+    print(f"🎉 SUCCESS! Retailer Report sent to group '{GROUP_NAME}' with caption: '{caption_text}'")
     print("--------------------------------------------------")
 
 if __name__ == "__main__":
-    main()
+    send_retailer_report()

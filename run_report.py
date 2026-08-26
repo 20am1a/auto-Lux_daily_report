@@ -11,10 +11,10 @@ import pyperclip
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Target Group Name (Production Group)
+# Target Group Name (Main Production Group)
 GROUP_NAME = "Simpel.AI_DA_Group"
 # Caption Text
-CAPTION_TEXT = "Lux - Retailers Onboarded"
+CAPTION_TEXT = "Testing lux daily report"
 
 def is_office_holiday(dt=None):
     """
@@ -69,7 +69,7 @@ def generate_table_image():
     cell_text = []
     cell_colors = []
 
-    # Row 1: Green Header (Total Onboarded)
+    # Row 1: Light Green Header (Total Onboarded)
     cell_text.append(["Onboarded Retailers Till Today", str(total_till_today)])
     cell_colors.append(["#D9EAD3", "#D9EAD3"])
 
@@ -135,7 +135,7 @@ def main():
 
     print("2. Opening WhatsApp Web in Chrome...")
     webbrowser.open("https://web.whatsapp.com")
-    time.sleep(7)
+    time.sleep(7)  # Wait for WhatsApp Web to load & focus
 
     print(f"3. Searching for group '{GROUP_NAME}'...")
     pyautogui.hotkey('ctrl', 'alt', '/')
