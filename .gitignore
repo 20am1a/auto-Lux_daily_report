@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Session & Profiles
+whatsapp_profile_session/
+selenium_whatsapp_profile/
+*.log
+.env
