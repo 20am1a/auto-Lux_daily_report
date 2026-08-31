@@ -16,11 +16,11 @@ from selenium.webdriver.support import expected_conditions as EC
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Scheduled Time for Test: 6:10 PM IST (18:10)
-SEND_TIME = "18:10"
-GROUP_NAME = "Testing"  # Test Group
+# Target Send Time for Test: 6:21 PM IST (18:21)
+SEND_TIME = "18:21"
+GROUP_NAME = "Testing"
 
-# Tracks last date sent
+# Force reset last_sent_date to allow 6:21 PM test trigger
 last_sent_date = None
 
 def is_office_holiday(dt=None):
@@ -206,12 +206,11 @@ def send_reports_now():
         last_sent_date = today_str
         return
 
-    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] ⏰ TARGET TIME HIT ({SEND_TIME})! Generating & sending both reports...")
+    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] ⏰ 6:21 PM HIT! Generating & sending both reports...")
     
     img1, cap1 = generate_retailer_report()
     img2, cap2 = generate_tatatele_report()
 
-    # Fast WhatsApp sending
     webbrowser.open("https://web.whatsapp.com")
     time.sleep(7)
 
@@ -248,28 +247,27 @@ def send_reports_now():
     time.sleep(2)
 
     last_sent_date = today_str
-    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 🎉 SUCCESS! Both reports automatically sent at {SEND_TIME} to group '{GROUP_NAME}'.")
+    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 🎉 SUCCESS! Both reports automatically sent at 6:21 PM to group '{GROUP_NAME}'.")
 
 def start_scheduler():
     global last_sent_date
     print("==================================================")
     print("🤖 Auto Lux Daily Report Background Scheduler Active")
-    print(f"⏰ Scheduled Target Time: {SEND_TIME} PM (6:10 PM IST)")
+    print(f"⏰ Scheduled Target Time: {SEND_TIME} PM (6:21 PM IST)")
     print(f"👥 Target Group: {GROUP_NAME}")
     print("==================================================")
 
+    has_triggered = False
+
     while True:
         now = datetime.datetime.now()
-        today_str = now.date().strftime("%Y-%m-%d")
+        current_time_str = now.strftime("%H:%M")
 
-        target_hour, target_min = map(int, SEND_TIME.split(":"))
-        target_datetime = now.replace(hour=target_hour, minute=target_min, second=0, microsecond=0)
+        if current_time_str == SEND_TIME and not has_triggered:
+            has_triggered = True
+            send_reports_now()
 
-        if last_sent_date != today_str:
-            if now >= target_datetime:
-                send_reports_now()
-
-        time.sleep(5) # Check every 5 seconds
+        time.sleep(2) # Check every 2 seconds
 
 if __name__ == "__main__":
     start_scheduler()

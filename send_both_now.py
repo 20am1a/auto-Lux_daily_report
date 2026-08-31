@@ -1,5 +1,6 @@
 import pymysql
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import os
 import sys
 import time
@@ -14,15 +15,14 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+pyautogui.FAILSAFE = False
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Smartflo Credentials
+# Target Group Name
+GROUP_NAME = "Testing"
 TATATELE_URL = "https://cloudphone.tatateleservices.com/login"
 TATATELE_USER = "or188065"
 TATATELE_PASS = "Kamal@3990"
-
-# Target WhatsApp Group
-GROUP_NAME = "Testing"  # Test Group
 
 def is_office_holiday(dt=None):
     if dt is None:
@@ -34,7 +34,6 @@ def is_office_holiday(dt=None):
     return False, "Working Day"
 
 def generate_retailer_report():
-    print("1. Fetching Retailer Onboarding stats from MySQL database...")
     conn = pymysql.connect(
         host="64.227.149.129",
         user="DAuser",
@@ -96,7 +95,6 @@ def generate_retailer_report():
     return image_path, f"Lux - Retailers Onboarded Till now is {total_till_today}"
 
 def generate_tatatele_report():
-    print("2. Fetching Call stats from Smartflo (Tata Teleservices)...")
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -167,29 +165,44 @@ def generate_tatatele_report():
         driver.quit()
         landed_call, answered, missed = 19, 12, 7
 
+    # Render table with single merged grey top header "Lux"
     fig, ax = plt.subplots(figsize=(8, 1.4), dpi=300)
     ax.axis('off')
 
+    cell_text = [
+        ["Agent", "Landed Call", "Answered", "Missed"],
+        ["Amaresh Kumar & Soumyajith", str(landed_call), str(answered), str(missed)]
+    ]
+
+    cell_colors = [
+        ["#FCE5CD"]*4,
+        ["#FFFFFF"]*4
+    ]
+
     table = ax.table(
-        cellText=[
-            ["Lux", "Lux", "Lux", "Lux"],
-            ["Agent", "Landed Call", "Answered", "Missed"],
-            ["Amaresh Kumar & Soumyajith", str(landed_call), str(answered), str(missed)]
-        ],
-        cellColours=[["#C0C0C0"]*4, ["#FCE5CD"]*4, ["#FFFFFF"]*4],
+        cellText=cell_text,
+        cellColours=cell_colors,
         cellLoc='center',
         colWidths=[0.46, 0.18, 0.18, 0.18],
-        loc='center'
+        loc='bottom',
+        bbox=[0, 0, 1.0, 0.62]
     )
+
     table.auto_set_font_size(False)
     table.set_fontsize(13)
 
     for (r, c), cell in table.get_celld().items():
         cell.set_edgecolor('black')
         cell.set_linewidth(1.5)
-        if r in [0, 1]:
+        if r == 0:
             cell.get_text().set_weight('bold')
-        cell.set_height(0.30)
+
+    # Draw single merged grey header box at top
+    rect = patches.Rectangle((0, 0.62), 1.0, 0.38, facecolor='#C0C0C0', edgecolor='black', linewidth=1.5, transform=ax.transAxes)
+    ax.add_patch(rect)
+
+    # Place single centered "Lux" text
+    ax.text(0.5, 0.81, "Lux", fontsize=15, fontweight='bold', ha='center', va='center', transform=ax.transAxes)
 
     plt.tight_layout()
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -199,23 +212,28 @@ def generate_tatatele_report():
 
     return image_path, "LUX- Inbound call"
 
-def send_both_reports():
+def send_reports():
     is_holiday, holiday_reason = is_office_holiday()
     if is_holiday:
         print(f"🏖️ OFFICE HOLIDAY DETECTED: {holiday_reason}. Skipping send.")
         return
 
-    print("==================================================")
-    print(f"🚀 GENERATING BOTH REPORTS FOR GROUP '{GROUP_NAME}'...")
-    print("==================================================")
-
+    print("1. Generating Report 1 (Retailer Onboarding)...")
     img1, cap1 = generate_retailer_report()
+
+    print("2. Generating Report 2 (Tata Tele Call Report)...")
     img2, cap2 = generate_tatatele_report()
 
-    print(f"📱 Opening WhatsApp Web to send both reports to group '{GROUP_NAME}'...")
+    print(f"3. Opening WhatsApp Web in Chrome...")
     webbrowser.open("https://web.whatsapp.com")
     time.sleep(7)
 
+    # Click in middle of screen to give Chrome focus!
+    print("Giving Chrome focus...")
+    pyautogui.click(x=600, y=400)
+    time.sleep(1)
+
+    print(f"4. Searching for group '{GROUP_NAME}'...")
     pyautogui.hotkey('ctrl', 'alt', '/')
     time.sleep(1)
     pyperclip.copy(GROUP_NAME)
@@ -224,8 +242,7 @@ def send_both_reports():
     pyautogui.press('enter')
     time.sleep(2.5)
 
-    # Report 1
-    print("Sending Report 1 (Retailers Onboarded Table + Caption)...")
+    print("5. Pasting Report 1 (Retailers Onboarded Table + Caption)...")
     ps_cmd1 = f"Set-Clipboard -Path '{img1}'"
     subprocess.run(["powershell", "-Command", ps_cmd1], check=True)
     time.sleep(1)
@@ -237,8 +254,7 @@ def send_both_reports():
     pyautogui.press('enter')
     time.sleep(3)
 
-    # Report 2
-    print("Sending Report 2 (Tata Tele Lux Call Table + Caption)...")
+    print("6. Pasting Report 2 (Tata Tele Lux Call Table + Caption)...")
     ps_cmd2 = f"Set-Clipboard -Path '{img2}'"
     subprocess.run(["powershell", "-Command", ps_cmd2], check=True)
     time.sleep(1)
@@ -250,9 +266,11 @@ def send_both_reports():
     pyautogui.press('enter')
     time.sleep(2)
 
+    pyperclip.copy("")
+
     print("--------------------------------------------------")
     print(f"🎉 SUCCESS! BOTH reports sent to group '{GROUP_NAME}'!")
     print("--------------------------------------------------")
 
 if __name__ == "__main__":
-    send_both_reports()
+    send_reports()
