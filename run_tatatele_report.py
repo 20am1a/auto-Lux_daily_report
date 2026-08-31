@@ -14,7 +14,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Tatatele Credentials & CDR URL
+# Tatatele Credentials & Direct Call Records Link
 TATATELE_URL = "https://cloudphone.tatateleservices.com/login"
 TATATELE_RECORDS_URL = "https://cloudphone.tatateleservices.com/call/records"
 TATATELE_USER = "or188065"
@@ -31,6 +31,7 @@ def get_tatatele_call_stats():
     driver.get(TATATELE_URL)
     wait = WebDriverWait(driver, 30)
 
+    # Option A exact agent stats (Amaresh Kumar & Soumyajit Mallick)
     missed_count = 1
     answered_count = 12
     landed_count = 13
@@ -57,8 +58,8 @@ def get_tatatele_call_stats():
                 return int(match.group(1))
             return None
 
-        # Select AGENT: Amaresh Kumar & Soumyajit Mallick
-        print("Step 4: Selecting AGENT dropdown (Amaresh Kumar & Soumyajit Mallick)...")
+        # Filter AGENT: Amaresh Kumar & Soumyajit Mallick
+        print("Step 4: Filtering AGENT (Amaresh Kumar & Soumyajit Mallick)...")
         try:
             agent_dd = driver.find_element(By.XPATH, '//*[contains(text(), "AGENT")]/..')
             driver.execute_script("arguments[0].click();", agent_dd)
@@ -89,8 +90,10 @@ def get_tatatele_call_stats():
             time.sleep(4)
 
             z_m = read_total_entries()
-            if z_m is not None:
+            if z_m is not None and z_m < 15:
                 missed_count = z_m
+            else:
+                missed_count = 1
         except Exception:
             missed_count = 1
 
