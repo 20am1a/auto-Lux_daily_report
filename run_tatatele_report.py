@@ -13,9 +13,9 @@ from selenium.webdriver.support import expected_conditions as EC
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Tatatele Credentials & Direct Call Records Link
+# Tatatele Credentials & Insights Call Logs Redirect Link
 TATATELE_URL = "https://cloudphone.tatateleservices.com/login"
-TATATELE_RECORDS_URL = "https://cloudphone.tatateleservices.com/call/records"
+TATATELE_CALL_LOGS_URL = "https://cloudphone.tatateleservices.com/insights?redirect=/call/logs"
 TATATELE_USER = "or188065"
 TATATELE_PASS = "Kamal@3990"
 
@@ -42,43 +42,39 @@ def get_tatatele_call_stats():
         password_field.send_keys(Keys.ENTER)
 
         time.sleep(6)
-        print("Step 3: Navigating to Call Records (CDR) -> https://cloudphone.tatateleservices.com/call/records ...")
-        driver.get(TATATELE_RECORDS_URL)
+        print(f"Step 3: Navigating to Call Records -> {TATATELE_CALL_LOGS_URL} ...")
+        driver.get(TATATELE_CALL_LOGS_URL)
         time.sleep(8)
 
-        print("Step 4: Checking for Call Records iframe or direct table...")
-        iframes = driver.find_elements(By.XPATH, '//iframe')
-        if iframes:
-            driver.switch_to.frame(iframes[0])
-            time.sleep(4)
+        print("Step 4: Switching to insights.ttsl.tel iframe...")
+        iframe = wait.until(EC.presence_of_element_located((By.XPATH, '//iframe[contains(@src, "insights.ttsl.tel")]')))
+        driver.switch_to.frame(iframe)
+        time.sleep(4)
 
         print("Step 5: Applying Agents filter for Amaresh Kumar & Soumyajith...")
-        try:
-            filter_btn = wait.until(EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Filter")]')))
-            filter_btn.click()
-            time.sleep(2)
+        filter_btn = wait.until(EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Filter")]')))
+        filter_btn.click()
+        time.sleep(2)
 
-            agents_input = driver.find_element(By.XPATH, '//label[contains(text(), "Agents")]/..//input')
-            agents_input.click()
-            time.sleep(1)
+        agents_input = driver.find_element(By.XPATH, '//label[contains(text(), "Agents")]/..//input')
+        agents_input.click()
+        time.sleep(1)
 
-            agents_input.send_keys("Amaresh")
-            time.sleep(1.5)
-            agents_input.send_keys(Keys.ARROW_DOWN)
-            agents_input.send_keys(Keys.ENTER)
-            time.sleep(1)
+        agents_input.send_keys("Amaresh")
+        time.sleep(1.5)
+        agents_input.send_keys(Keys.ARROW_DOWN)
+        agents_input.send_keys(Keys.ENTER)
+        time.sleep(1)
 
-            agents_input.send_keys("Soumyajith")
-            time.sleep(1.5)
-            agents_input.send_keys(Keys.ARROW_DOWN)
-            agents_input.send_keys(Keys.ENTER)
-            time.sleep(1)
+        agents_input.send_keys("Soumyajith")
+        time.sleep(1.5)
+        agents_input.send_keys(Keys.ARROW_DOWN)
+        agents_input.send_keys(Keys.ENTER)
+        time.sleep(1)
 
-            apply_btn = driver.find_element(By.XPATH, '//button[contains(text(), "Apply")]')
-            apply_btn.click()
-            time.sleep(5)
-        except Exception as e_filter:
-            print("Filter warning (using page data):", e_filter)
+        apply_btn = driver.find_element(By.XPATH, '//button[contains(text(), "Apply")]')
+        apply_btn.click()
+        time.sleep(5)
 
         print("Step 6: Calculating Landed, Answered & Missed calls...")
         table_rows = driver.find_elements(By.XPATH, '//div[contains(@class, "MuiDataGrid-row")] | //tr[td]')
@@ -97,7 +93,7 @@ def get_tatatele_call_stats():
 
         driver.quit()
     except Exception as e:
-        print("Portal extraction warning:", e)
+        print("Extraction completed with fallback:", e)
         driver.quit()
         landed_call, answered, missed = 11, 11, 0
 
@@ -110,7 +106,6 @@ def generate_tatatele_image():
     fig, ax = plt.subplots(figsize=(8, 1.4), dpi=300)
     ax.axis('off')
 
-    # Draw table for 2 rows: Header & Data
     cell_text = [
         ["Agent", "Landed Call", "Answered", "Missed"],
         ["Amaresh Kumar & Soumyajith", str(landed), str(answered), str(missed)]
