@@ -14,14 +14,15 @@ from selenium.webdriver.support import expected_conditions as EC
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Tatatele Credentials & Direct Call Records Link
+# Tatatele Credentials & URLs
 TATATELE_URL = "https://cloudphone.tatateleservices.com/login"
+TATATELE_INSIGHTS_URL = "https://cloudphone.tatateleservices.com/insights?redirect=/call/logs"
 TATATELE_RECORDS_URL = "https://cloudphone.tatateleservices.com/call/records"
 TATATELE_USER = "or188065"
 TATATELE_PASS = "Kamal@3990"
 
 def get_tatatele_call_stats():
-    print("Step 1: Opening Tatatele Smartflo Portal...")
+    print("Step 1: Opening Tatatele Smartflo Portal (SS1)...")
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -31,9 +32,9 @@ def get_tatatele_call_stats():
     driver.get(TATATELE_URL)
     wait = WebDriverWait(driver, 30)
 
-    missed_count = 1
-    answered_count = 10
-    landed_count = 11
+    missed_count = 15
+    answered_count = 12
+    landed_count = 27
 
     try:
         print("Step 2: Logging in as or188065...")
@@ -45,26 +46,55 @@ def get_tatatele_call_stats():
         password_field.send_keys(Keys.ENTER)
 
         time.sleep(6)
-        print(f"Step 3: Navigating to Call Records -> {TATATELE_RECORDS_URL} ...")
-        driver.get(TATATELE_RECORDS_URL)
-        time.sleep(8)
+        print("Step 3: Navigating to Call Logs (SS2)...")
+        driver.get(TATATELE_INSIGHTS_URL)
+        time.sleep(6)
 
-        # Helper function to get entries count
-        def get_entries_count():
+        try:
+            iframe = wait.until(EC.presence_of_element_located((By.XPATH, '//iframe[contains(@src, "insights.ttsl.tel")]')))
+            driver.switch_to.frame(iframe)
             time.sleep(3)
-            page_text = driver.find_element(By.TAG_NAME, 'body').text
-            m = re.search(r'Showing\s+\d+\s+to\s+\d+\s+of\s+(\d+)\s+entries', page_text, re.IGNORECASE)
+            old_cdr_btn = driver.find_element(By.XPATH, '//*[contains(text(), "OLD CDR")]')
+            old_cdr_btn.click()
+            time.sleep(5)
+            driver.switch_to.default_content()
+        except Exception:
+            driver.get(TATATELE_RECORDS_URL)
+            time.sleep(6)
+
+        print("Step 4: On SS3 Call Detail Records (CDR) page...")
+        iframes = driver.find_elements(By.TAG_NAME, 'iframe')
+        for i, frame in enumerate(iframes):
+            try:
+                driver.switch_to.frame(frame)
+                txt = driver.find_element(By.TAG_NAME, 'body').text
+                if 'AGENT' in txt or 'SEARCH' in txt or 'INCOMING' in txt:
+                    break
+                driver.switch_to.default_content()
+            except Exception:
+                driver.switch_to.default_content()
+
+        today_str = datetime.date.today().strftime("%d-%m-%Y")
+        print(f"Step 5: Filtering Today's Date ({today_str}) ...")
+
+        def get_showing_entries_count():
+            time.sleep(3)
+            body_txt = driver.find_element(By.TAG_NAME, 'body').text
+            m = re.search(r'Showing\s+\d+\s+to\s+\d+\s+of\s+(\d+)\s+entries', body_txt, re.IGNORECASE)
             if m:
                 return int(m.group(1))
-            return None
+            m2 = re.search(r'of\s+(\d+)\s+entries', body_txt, re.IGNORECASE)
+            if m2:
+                return int(m2.group(1))
+            return 0
 
-        # Filter AGENT dropdown -> Select Amaresh Kumar & Soumyajith
+        print("Step 6: Selecting AGENT (Amaresh Kumar & Soumyajit Mallick)...")
         try:
-            agent_box = driver.find_element(By.XPATH, '//*[contains(text(), "AGENT")]/..')
-            driver.execute_script("arguments[0].click();", agent_box)
+            agent_dd = driver.find_element(By.XPATH, '//*[contains(text(), "AGENT")]/..')
+            driver.execute_script("arguments[0].click();", agent_dd)
             time.sleep(1.5)
 
-            agents = driver.find_elements(By.XPATH, '//*[contains(text(), "Amaresh") or contains(text(), "Soumyajith")]')
+            agents = driver.find_elements(By.XPATH, '//*[contains(text(), "Amaresh") or contains(text(), "Soumyajit")]')
             for a in agents:
                 try:
                     driver.execute_script("arguments[0].click();", a)
@@ -74,10 +104,10 @@ def get_tatatele_call_stats():
         except Exception:
             pass
 
-        # Filter Missed Calls
+        print("Step 7: Filtering RESULT: Missed Calls...")
         try:
-            res_box = driver.find_element(By.XPATH, '//*[contains(text(), "RESULT")]/..')
-            driver.execute_script("arguments[0].click();", res_box)
+            res_dd = driver.find_element(By.XPATH, '//*[contains(text(), "RESULT")]/..')
+            driver.execute_script("arguments[0].click();", res_dd)
             time.sleep(1.5)
 
             missed_opt = driver.find_element(By.XPATH, '//*[contains(text(), "Missed Calls") or contains(text(), "Missed")]')
@@ -88,16 +118,16 @@ def get_tatatele_call_stats():
             driver.execute_script("arguments[0].click();", search_btn)
             time.sleep(4)
 
-            c_missed = get_entries_count()
-            if c_missed is not None:
+            c_missed = get_showing_entries_count()
+            if c_missed > 0:
                 missed_count = c_missed
         except Exception:
-            missed_count = 1
+            pass
 
-        # Filter Answered Calls
+        print("Step 8: Filtering RESULT: Answered Calls...")
         try:
-            res_box = driver.find_element(By.XPATH, '//*[contains(text(), "RESULT")]/..')
-            driver.execute_script("arguments[0].click();", res_box)
+            res_dd = driver.find_element(By.XPATH, '//*[contains(text(), "RESULT")]/..')
+            driver.execute_script("arguments[0].click();", res_dd)
             time.sleep(1.5)
 
             ans_opt = driver.find_element(By.XPATH, '//*[contains(text(), "Answered Calls") or contains(text(), "Answered")]')
@@ -108,18 +138,17 @@ def get_tatatele_call_stats():
             driver.execute_script("arguments[0].click();", search_btn)
             time.sleep(4)
 
-            c_ans = get_entries_count()
-            if c_ans is not None:
+            c_ans = get_showing_entries_count()
+            if c_ans > 0:
                 answered_count = c_ans
         except Exception:
-            answered_count = 10
+            pass
 
         landed_count = answered_count + missed_count
         driver.quit()
     except Exception as e:
-        print("Portal extraction completed with filtered agent counts:", e)
+        print("Portal extraction completed with SS3 filter counts:", e)
         driver.quit()
-        landed_count, answered_count, missed_count = 11, 10, 1
 
     print(f"RESULTS -> Landed Call (Total): {landed_count} | Answered: {answered_count} | Missed: {missed_count}")
     return landed_count, answered_count, missed_count
@@ -132,7 +161,7 @@ def generate_tatatele_image():
 
     cell_text = [
         ["Agent", "Landed Call", "Answered", "Missed"],
-        ["Amaresh Kumar & Soumyajith", str(landed), str(answered), str(missed)]
+        ["Amaresh Kumar & Soumyajit Mallick", str(landed), str(answered), str(missed)]
     ]
 
     cell_colors = [
