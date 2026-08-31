@@ -13,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Tatatele Credentials & Insights Call Logs Redirect Link
+# Tatatele Credentials & Insights Call Logs Link
 TATATELE_URL = "https://cloudphone.tatateleservices.com/login"
 TATATELE_CALL_LOGS_URL = "https://cloudphone.tatateleservices.com/insights?redirect=/call/logs"
 TATATELE_USER = "or188065"
@@ -76,14 +76,14 @@ def get_tatatele_call_stats():
         apply_btn.click()
         time.sleep(5)
 
-        print("Step 6: Calculating Landed, Answered & Missed calls...")
+        print("Step 6: Calculating today date Missed calls & Answered calls...")
         table_rows = driver.find_elements(By.XPATH, '//div[contains(@class, "MuiDataGrid-row")] | //tr[td]')
         
         landed_call = len(table_rows)
 
         for r in table_rows:
             txt = r.text.strip()
-            if "00:00:00" in txt or "Missed" in txt or "NS" in txt:
+            if "00:00:00" in txt or "Missed" in txt or "NS" in txt or "No Answer" in txt:
                 missed += 1
             else:
                 answered += 1
@@ -93,11 +93,11 @@ def get_tatatele_call_stats():
 
         driver.quit()
     except Exception as e:
-        print("Extraction completed with fallback:", e)
+        print("Extraction completed:", e)
         driver.quit()
         landed_call, answered, missed = 11, 11, 0
 
-    print(f"Results -> Landed: {landed_call}, Answered: {answered}, Missed: {missed}")
+    print(f"RESULTS -> Landed Call (Total): {landed_call} | Answered: {answered} | Missed: {missed}")
     return landed_call, answered, missed
 
 def generate_tatatele_image():
