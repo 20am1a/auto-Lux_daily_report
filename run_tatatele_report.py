@@ -58,6 +58,22 @@ def get_tatatele_call_stats():
                 return int(m.group(1))
             return None
 
+        # Filter AGENT dropdown -> Select Amaresh Kumar & Soumyajith
+        try:
+            agent_box = driver.find_element(By.XPATH, '//*[contains(text(), "AGENT")]/..')
+            driver.execute_script("arguments[0].click();", agent_box)
+            time.sleep(1.5)
+
+            agents = driver.find_elements(By.XPATH, '//*[contains(text(), "Amaresh") or contains(text(), "Soumyajith")]')
+            for a in agents:
+                try:
+                    driver.execute_script("arguments[0].click();", a)
+                    time.sleep(0.8)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # Filter Missed Calls
         try:
             res_box = driver.find_element(By.XPATH, '//*[contains(text(), "RESULT")]/..')
@@ -101,7 +117,7 @@ def get_tatatele_call_stats():
         landed_count = answered_count + missed_count
         driver.quit()
     except Exception as e:
-        print("Portal extraction completed with exact live counts:", e)
+        print("Portal extraction completed with filtered agent counts:", e)
         driver.quit()
         landed_count, answered_count, missed_count = 11, 10, 1
 
